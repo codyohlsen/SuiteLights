@@ -3,7 +3,6 @@
 //#include <Adafruit_NeoPixel.h>
 #include <OctoWS2811.h>
 #include <FastLED.h>
-//#include "FastLED.h>
 #include <Audio.h>
 #include <Wire.h>
 
@@ -12,7 +11,7 @@
 
 #define NUM_CUPS 10
 #define NUM_PIXELS_PER_CUP 24
-#define NUM_LEDS_FASTLED (NUM_CUPS * NUM_PIXELS_PER_CUP)
+#define NUM_LEDS_CUPS (NUM_CUPS * NUM_PIXELS_PER_CUP)
 
 #define MATRIX_WIDTH 60
 #define MATRIX_HEIGHT 8
@@ -23,7 +22,7 @@
 #define LINE_IN_PIN A3
 // MATRIX pins are predefined by the OctoWS library.
 
-#define NEOPIXEL_CONFIG (NEO_RGB + NEO_KHZ800)
+//#define NEOPIXEL_CONFIG (NEO_RGB + NEO_KHZ800)
 #define OCTOWS_CONFIG (WS2811_RGB | WS2811_800kHz)
 
 #define INVALID Serial.println("Should not be here.")
@@ -38,7 +37,7 @@ AudioAnalyzeFFT1024      fft;            //xy=265,75
 AudioConnection          patchCord1(adc1, fft);
 
 // Music stuff
-//StripMusicHandler stripMusicHandler = StripMusicHandler(fft);
+StripMusicHandler stripMusicHandler = StripMusicHandler(fft);
 TenCupsMusicHandler cupsMuiscHandler = TenCupsMusicHandler(fft);
 MatrixMusicHandler matrixMusicHandler = MatrixMusicHandler(fft);
 
@@ -49,8 +48,8 @@ void matrixComplete(uint8_t unused);
 void sidesComplete(uint8_t unused);
 
 // Side Strips
-//LedsNeoWrapper stripsWrapper = LedsNeoWrapper(SIDE_STRIP_LEN * NUM_SIDE_STRIPS, SIDE_STRIPS_PIN, NEOPIXEL_CONFIG);
-//SuiteLights sideStrips = SuiteLights(stripsWrapper, stripMusicHandler, &sidesComplete, NUM_SIDE_STRIPS);
+LedsFastWrapper stripsWrapper = LedsFastWrapper(SIDE_STRIPS_PIN);
+SuiteLights sideStrips = SuiteLights(stripsWrapper, stripMusicHandler, &sidesComplete, NUM_SIDE_STRIPS);
 
 // Cups lights
 //LedsNeoWrapper mainCupsWrapper = LedsNeoWrapper(NUM_CUPS * NUM_PIXELS_PER_CUP, MAIN_CUPS_PIN, NEOPIXEL_CONFIG);
@@ -83,7 +82,7 @@ void setup()
   Serial.println("INitializing Suite House components...");
   // Begins the suite house components.
   Serial.println("side strips..");
-//  sideStrips.begin();
+  sideStrips.begin();
   Serial.println("main cups..");
   mainCups.begin();
   Serial.println("guest cups..");
@@ -111,24 +110,38 @@ void loop()
   suiteMatrix.Update(fftAvailable);
   mainCups.Update(fftAvailable);
   guestCups.Update(fftAvailable);
-//  sideStrips.Update(fftAvailable);
-//delay(10);
+  sideStrips.Update(fftAvailable);
 }
 
 // Default everything to music.
 void defaultControls() {
-  uint32_t interval = 5;
-  uint32_t color1 = guestCups.Color(0, 255, 0);
-  uint32_t color2 = 150;//guestCups.Color(255, 0, 0);
-//  suiteMatrix.Music(color1, color2);
+  uint32_t interval = 10;
+//  CRGB color2 = CRGB( 50, 50, 0);//guestCups.Color(0, 255, 0);
+//  CRGB color1 = CRGB( 0, 50, 50);//150;//guestCups.Color(255, 0, 0);
+  CRGB color1 = CRGB( 50, 0, 0);//150;//guestCups.Color(255, 0, 0);
+  CRGB color2 = CRGB( 0, 0, 0);//150;//guestCups.Color(255, 0, 0);
+  suiteMatrix.Music(color1, color2);
+//  suiteMatrix.RainbowCycleAll(2000);
+//  suiteMatrix.ScannerAll(color1, 400);
+//  mainCups.RainbowCycleAll(1000);
+//  guestCups.RainbowCycleAll(1000);
 //  mainCups.Music(color1, color2);
 //  guestCups.Music(color1, color2);
-//  sideStrips.Music(color1, color2);
-suiteMatrix.TheaterChase(0, color1, color2, interval);
-for(int i = 0; i < 10; i++) {
-  guestCups.TheaterChase(i, color1, color2, interval);
-  mainCups.TheaterChase(i, color1, color2, interval);
-}
+//  mainCups.Scanner(0, color1, 100);
+//  guestCups.Scanner(0, color1, 100);
+//   mainCups.Scanner(1, color1, 100);
+//  guestCups.Scanner(1, color1, 100);
+//  mainCups.ScannerAll(color1, interval);
+//  guestCups.ScannerAll(color1, interval);
+//  sideStrips.ScannerAll(color1, 1000);
+  mainCups.TheaterChase(0, color1, color2, 1000);
+  guestCups.TheaterChase(0, color1, color2, 1000);
+  sideStrips.TheaterChase(0, color1, color2, 100);
+////  suiteMatrix.TheaterChase(0, color1, color2, interval);
+//  for(int i = 0; i < 10; i++) {
+//    guestCups.TheaterChase(i, color1, color2, 100);
+//    mainCups.TheaterChase(i, color1, color2, 100);
+//  }
 }
 
 // Checks controls to change modes on table.

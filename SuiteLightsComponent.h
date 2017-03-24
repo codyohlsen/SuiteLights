@@ -22,7 +22,7 @@ class SuiteLights
     unsigned long Interval;   // milliseconds between updates
     unsigned long lastUpdate; // last update of position (all 10 cups)
     
-    uint32_t Color1, Color2;  // What colors are in use (global for now)
+    CRGB Color1, Color2;  // What colors are in use (global for now)
     uint16_t TotalSteps[MAX_NUM_SPLITS];  // total number of steps in the pattern
     uint16_t Indexes[MAX_NUM_SPLITS];  // current step within the pattern
     
@@ -141,7 +141,7 @@ class SuiteLights
       }
     }
 
-    void Music(uint8_t color1, uint8_t color2) {
+    void Music(CRGB color1, CRGB color2) {
       // Sets ALL to music (no option for just one of them for now)
       for (int i = 0; i < numCups; ++i) {
         ActivePatterns[i] = MUSIC;
@@ -208,7 +208,7 @@ class SuiteLights
     }
 
     // Initialize for a Theater Chase
-    void TheaterChase(uint8_t i, uint32_t color1, uint32_t color2, uint8_t interval, direction dir = FORWARD)
+    void TheaterChase(uint8_t i, CRGB color1, CRGB color2, uint8_t interval, direction dir = FORWARD)
     {
         ActivePatterns[i] = THEATER_CHASE;
         Interval = interval;
@@ -251,9 +251,15 @@ class SuiteLights
     {
         leds.setPixelColor(numPixelsPerCup * i + Indexes[i], Color1);
     }
+
+    void ScannerAll(CRGB color1, uint8_t interval) {
+      for (int i = 0; i < numCups; i++) {
+        Scanner(i, color1, interval);
+      }
+    }
     
     // Initialize for a SCANNNER
-    void Scanner(uint8_t i, uint32_t color1, uint8_t interval)
+    void Scanner(uint8_t i, CRGB color1, uint8_t interval)
     {
         ActivePatterns[i] = SCANNER;
         Interval = interval;
@@ -281,9 +287,15 @@ class SuiteLights
             }
         }
     }
+
+    void FadeAll(CRGB color1, CRGB color2, uint16_t steps, uint8_t interval, direction dir = FORWARD) {
+      for (int i = 0; i < numCups; i++) {
+        Fade(i, color1, color2, steps, interval, dir);
+      }
+    }
     
     // Initialize for a Fade
-    void Fade(uint8_t i, uint32_t color1, uint32_t color2, uint16_t steps, uint8_t interval, direction dir = FORWARD)
+    void Fade(uint8_t i, CRGB color1, CRGB color2, uint16_t steps, uint8_t interval, direction dir = FORWARD)
     {
         ActivePatterns[i] = FADE;
         Interval = interval;
@@ -299,23 +311,23 @@ class SuiteLights
     {
         // Calculate linear interpolation between Color1 and Color2
         // Optimise order of operations to minimize truncation error
-        uint8_t red = ((Red(Color1) * (TotalSteps[i] - Indexes[i])) + (Red(Color2) * Indexes[i])) / TotalSteps[i];
-        uint8_t green = ((Green(Color1) * (TotalSteps[i] - Indexes[i])) + (Green(Color2) * Indexes[i])) / TotalSteps[i];
-        uint8_t blue = ((Blue(Color1) * (TotalSteps[i] - Indexes[i])) + (Blue(Color2) * Indexes[i])) / TotalSteps[i];
+        uint8_t red = ((Color1.red * (TotalSteps[i] - Indexes[i])) + (Color2.red * Indexes[i])) / TotalSteps[i];
+        uint8_t green = ((Color1.green * (TotalSteps[i] - Indexes[i])) + (Color2.green * Indexes[i])) / TotalSteps[i];
+        uint8_t blue = ((Color1.blue * (TotalSteps[i] - Indexes[i])) + (Color2.blue * Indexes[i])) / TotalSteps[i];
         
         ColorSet(i, leds.Color(red, green, blue));
     }
    
     // Calculate 50% dimmed version of a color (used by ScannerUpdate)
-    uint32_t DimColor(uint32_t color)
+    CRGB DimColor(CRGB color)
     {
         // Shift R, G and B components one bit to the right
-        uint32_t dimColor = leds.Color(Red(color) >> 1, Green(color) >> 1, Blue(color) >> 1);
+        CRGB dimColor = leds.Color(color.red >> 1, color.green >> 1, color.blue >> 1);
         return dimColor;
     }
 
     // Set all pixels to a color (synchronously)
-    void ColorSet(uint8_t index, uint32_t color)
+    void ColorSet(uint8_t index, CRGB color)
     {
         for (int i = 0; i < leds.numPixels() / numCups; i++)
         {
@@ -326,28 +338,10 @@ class SuiteLights
     uint32_t Color(uint8_t r, uint8_t g, uint8_t b) {
       return leds.Color(r, g, b);
     }
-
-    // Returns the Red component of a 32-bit color
-    uint8_t Red(uint32_t color)
-    {
-        return (color >> 16) & 0xFF;
-    }
-
-    // Returns the Green component of a 32-bit color
-    uint8_t Green(uint32_t color)
-    {
-        return (color >> 8) & 0xFF;
-    }
-
-    // Returns the Blue component of a 32-bit color
-    uint8_t Blue(uint32_t color)
-    {
-        return color & 0xFF;
-    }
     
     // Input a value 0 to 255 to get a color value.
     // The colours are a transition r - g - b - back to r.
-    uint32_t Wheel(byte WheelPos)
+    CRGB Wheel(byte WheelPos)
     {
         WheelPos = 255 - WheelPos;
         if(WheelPos < 85)

@@ -11,9 +11,9 @@ class LedsWrapper
   virtual void show() {INVALID;}
   virtual void begin() { INVALID;}
   virtual uint16_t numPixels() { INVALID; return 0;}
-  virtual void setPixelColor(uint16_t index, uint8_t color) {INVALID; }
-  virtual uint8_t getPixelColor(uint16_t index) { INVALID; return 0;}
-  virtual uint8_t Color(uint8_t r, uint8_t g, uint8_t b) { INVALID; return 0;}
+  virtual void setPixelColor(uint16_t index, CRGB color) {INVALID; }
+  virtual CRGB getPixelColor(uint16_t index) { INVALID; return 0;}
+  virtual CRGB Color(uint8_t r, uint8_t g, uint8_t b) { INVALID; return 0;}
 };
 //
 //class LedsNeoWrapper : public Adafruit_NeoPixel, public LedsWrapper {
@@ -26,19 +26,23 @@ class LedsWrapper
 //    Adafruit_NeoPixel::begin();
 //  }
 //   uint16_t numPixels() override { return Adafruit_NeoPixel::numPixels(); }
-//   void setPixelColor(uint16_t index, uint8_t color) override {Adafruit_NeoPixel::setPixelColor(index, color); }
+//   void setPixelColor(uint16_t index, CRGB color) override {Adafruit_NeoPixel::setPixelColor(index, Adafruit_NeoPixel::Color(color.red, color.green, color.blue)); }
 //   uint8_t getPixelColor(uint16_t index) override { return Adafruit_NeoPixel::getPixelColor(index);}
-//   uint8_t Color(uint8_t r, uint8_t g, uint8_t b) override { return Adafruit_NeoPixel::Color(r,g,b);}
+//   CRGB Color(uint8_t r, uint8_t g, uint8_t b) override { return Adafruit_NeoPixel::Color(r,g,b);}
 //};
 
 class LedsFastWrapper : public LedsWrapper {
-  struct CRGB leds[NUM_LEDS_FASTLED];
+  struct CRGB leds[NUM_LEDS_CUPS]; // using this same length for the side strips even though it is larger.
+  uint8_t m_pin;
   public: 
   LedsFastWrapper(uint8_t pin) {
-    if (pin == 9) {
-      FastLED.addLeds<WS2811, 9, RGB>((struct CRGB*)leds, NUM_LEDS_FASTLED);
-    } else if (pin == 10) {
-      FastLED.addLeds<WS2811, 10, RGB>((struct CRGB*)leds, NUM_LEDS_FASTLED);
+    m_pin = pin;
+    if (m_pin == MAIN_CUPS_PIN) {
+      FastLED.addLeds<WS2811, MAIN_CUPS_PIN, RGB>((struct CRGB*)leds, NUM_LEDS_CUPS);
+    } else if (m_pin == GUEST_CUPS_PIN) {
+      FastLED.addLeds<WS2811, GUEST_CUPS_PIN, RGB>((struct CRGB*)leds, NUM_LEDS_CUPS);
+    } else if (m_pin == SIDE_STRIPS_PIN) {
+      FastLED.addLeds<WS2811, SIDE_STRIPS_PIN, RGB>((struct CRGB*)leds, SIDE_STRIP_LEN * NUM_SIDE_STRIPS);
     }
   }
   void show() override {
@@ -47,10 +51,14 @@ class LedsFastWrapper : public LedsWrapper {
   void begin() override {
     // no need for initialization from FASTLED
   }
-   uint16_t numPixels() override { return NUM_LEDS_FASTLED; }
-   void setPixelColor(uint16_t index, uint8_t color) override { leds[index] = color; }
-   uint8_t getPixelColor(uint16_t index) override { return leds[index];}
-   uint8_t Color(uint8_t r, uint8_t g, uint8_t b) override { return 50;}//Adafruit_NeoPixel::Color(r,g,b);}
+   uint16_t numPixels() override { uint16_t ret =  m_pin == SIDE_STRIPS_PIN? SIDE_STRIP_LEN * NUM_SIDE_STRIPS : NUM_LEDS_CUPS; 
+//   Serial.print("Returning: ");
+//   Serial.println(ret);
+   return ret;
+   }
+   void setPixelColor(uint16_t index, CRGB color) override { leds[index] = color; }
+   CRGB getPixelColor(uint16_t index) override { return leds[index];}
+   CRGB Color(uint8_t r, uint8_t g, uint8_t b) override { return CRGB(r, g, b);}
 };
 
 class LedsOctoWrapper : public OctoWS2811, public LedsWrapper { 
@@ -66,7 +74,17 @@ class LedsOctoWrapper : public OctoWS2811, public LedsWrapper {
     OctoWS2811::begin();
   }
   uint16_t numPixels() override { return num * 8; }
-  uint8_t getPixelColor(uint16_t index) override { return getPixel(index); }
-   void setPixelColor(uint16_t index, uint8_t color) override {OctoWS2811::setPixel(index, color); }
-   uint8_t Color(uint8_t r, uint8_t g, uint8_t b) override { return 200;}//Adafruit_NeoPixel::Color(r,g,b);}
+  CRGB getPixelColor(uint16_t index) override { 
+    uint32_t pix = getPixel(index); 
+    return CRGB(pix & 0xFF, (pix & 0x00FF) << 8, (pix & 0x0000FF) << 16);
+  }
+   void setPixelColor(uint16_t index, CRGB color) override {
+    uint32_t color_octo = color.blue;
+    color_octo = color_octo << 8;
+    color_octo += color.green;
+    color_octo = color_octo << 8;
+    color_octo += color.red;
+    OctoWS2811::setPixel(index, color_octo);
+    }
+   CRGB Color(uint8_t r, uint8_t g, uint8_t b) override { return CRGB(r, g, b);}
 };
